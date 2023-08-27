@@ -2,8 +2,8 @@ const User = require("../models/user");
 const createToken = require("../utils/jwtToken");
 const bcrypt = require('bcryptjs');
 const otpGenerator = require('otp-generator');
-const sqMail = require("@sendgrid/mail");
 const Cryptr = require('cryptr');
+const {sendOTP} = require("../utils/sendMails");
 
 require('dotenv').config({ path: require('find-config')('.env') })
 const cryptr = new Cryptr(process.env.TWO_WAY_SECRET);
@@ -23,7 +23,11 @@ exports.registerUser = async(req, res, next)=>{
             else{
                 const user = await User.findByIdAndUpdate({_id: result[0]._id}, { otp: otp});
                 const encryptedId = await cryptr.encrypt(user._id);
-                res.status(200).json({name:user.name, opt: user.otp, userId: encryptedId});
+                let msg=`Hi,\n Your OTP is: ${otp}`;
+                sendOTP(user.email, msg).then(()=>{
+                    res.status(200).json({name:user.name, opt: user.otp, userId: encryptedId}); 
+                })
+                       
             }
         }
         else{
@@ -34,7 +38,7 @@ exports.registerUser = async(req, res, next)=>{
                 otp: otp,
                 verified: false
             })
-            //const token = createToken(user._id);
+            const token = createToken(user._id);
             console.log(token);
             //res.status(200).cookie('Usertoken', token, {httpOnly:true}).json({name:user.name, opt: user.otp, verified: user.verified});
             const encryptedId = await cryptr.encrypt(user._id);
