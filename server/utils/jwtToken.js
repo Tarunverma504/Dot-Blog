@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
-function createToken(id){    
-    return jwt.sign({id}, 'Dot-Blog2_SecretKey', {
+function createToken(data){    
+    return jwt.sign({data}, 'Dot-Blog2_SecretKey', {
     });
 }
-module.exports = createToken;
+function getTokenValue(token){
+    return jwt.verify(token, 'Dot-Blog2_SecretKey').data;
+}
+module.exports = {createToken, getTokenValue};

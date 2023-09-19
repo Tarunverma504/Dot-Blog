@@ -5,9 +5,11 @@ const {
         registerUser,
         loginUser,
         verifyUserOtp,
-        resendOtp
+        resendOtp,
+        isAuthenticated
     } = require('../controller/authController');
 
+router.route('/isAuthenticated').get(isAuthenticated);
 router.route('/register').post(registerUser);
 router.route('/verify').post(verifyUserOtp);
 router.route('/resendOtp').post(resendOtp);

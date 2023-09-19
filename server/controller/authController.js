@@ -1,5 +1,5 @@
 const User = require("../models/user");
-const createToken = require("../utils/jwtToken");
+const {createToken, getTokenValue} = require("../utils/jwtToken");
 const bcrypt = require('bcryptjs');
 const otpGenerator = require('otp-generator');
 const Cryptr = require('cryptr');
@@ -8,27 +8,44 @@ const {sendOTP} = require("../utils/sendMails");
 require('dotenv').config({ path: require('find-config')('.env') })
 const cryptr = new Cryptr(process.env.TWO_WAY_SECRET);
 
+exports.isAuthenticated = async(req, res)=>{
+    const token = await req.headers.authorization.replace("Bearer ", "");
+    if (!token ||token.length<1|| token===null) {
+        res.status(401).send({message: 'No User Loggged'});
+    }
+
+    const Id = getTokenValue(token);
+    const user = await User.findById(Id);
+    if(user){
+         res.status(200).json({name:user.name, profilePhoto:user.profilePhoto})
+    }
+
+}
+
 exports.registerUser = async(req, res)=>{
     try{
-        const {name, password, email} = req.body;
-
+        const {username, email, password} = req.body;
+        // username = username.trim();
+        if(username.trim().length<1 || email.trim().length<1 || password.trim().length<1){
+            res.status(401).send({ message: 'Please fill all the details'});
+        }
         const otp =otpGenerator.generate(6, { upperCase: true, specialChars: false });
         const result = await User.find({email:email});
         let user = null;
         if(result && result.length>0){
             // if email exists and otp is also verified mean suer profile is already created successfully
             if(result[0].verified){
-                res.status(403).send({ message: 'Email is Already Registered'});
+                res.status(401).send({ message: 'Email is Already Registered'});
             }
                 
             // email is exist but otp is not verified
             else{
-                user = await User.findByIdAndUpdate({_id: result[0]._id}, { otp: otp});                       
+                user = await User.findByIdAndUpdate({_id: result[0]._id}, {name:username}, {password:password}, { otp: otp});                       
             }
         }
         else{
             user = await User.create({
-                name,   
+                name:username,   
                 email,
                 password,
                 otp: otp,
@@ -46,8 +63,10 @@ exports.registerUser = async(req, res)=>{
         if(user!=null){
             const encryptedId = await cryptr.encrypt(user._id);
             let msg=`Hi,\n Your OTP is: ${otp}`;
-            await sendOTP(user.email, msg)
-            res.status(200).json({name:user.name, opt: user.otp, userId: encryptedId});
+            await sendOTP(user.email, msg);
+            console.log(user._id);
+            const token = createToken(user._id);
+            res.status(200).json({verificationToken:token});
         }
     }
     catch(err){
@@ -67,24 +86,29 @@ exports.registerUser = async(req, res)=>{
 
 exports.verifyUserOtp = async(req, res, next)=>{
     try{
-        const {userId, Otp} = req.body;
-        if(userId==null || userId.length<1){
-            res.status(504).send({ message: 'UserId not received'});
+        const {verificationToken, Otp} = req.body;
+        if(verificationToken==null || verificationToken.length<1){
+            res.status(402).send({ message: 'Token not received'});
         }
-        const Id = cryptr.decrypt(userId);
-        const user = await User.findById({_id: Id});
-        console.log(user);
+        if(Otp==null || Otp.trim().length<1){
+            res.status(401).send({ message: 'Please fill the Otp'});
+        }
+        const id = getTokenValue(verificationToken);
+        const user = await User.findById({_id: id});
         if(user){
             if(user.verified){
-                res.status(504).send({ message: 'User already exist'});
+                res.status(403).send({ message: 'User already exist'});
             }
             else{
                 if(user.otp == Otp){
+
+                    const user = await User.findByIdAndUpdate({_id: id}, {verified:true});
+
                     const token = createToken(user._id);
-                    res.status(200).cookie('Usertoken', token, {httpOnly:true}).json({message: "Otp Verified"})
+                    res.status(200).json({name:user.name, profilePhoto:user.profilePhoto, authToken:token});
                 }
                 else{
-                    res.status(400).send({message: "Otp not Verified"});
+                    res.status(401).send({message: "Otp not Verified"});
                 }
             }
         }
@@ -94,7 +118,8 @@ exports.verifyUserOtp = async(req, res, next)=>{
         
     }
     catch(err){
-        res.status(400).send({message: "Otp not Verified"});
+        console.log(err);
+        res.status(401).send({message: "Otp not Verified"});
     }
 }
 
@@ -123,7 +148,7 @@ exports.loginUser = async(req, res, next)=>{
     try{
         const {email, password} = req.body;
         if(!email || !password){
-            res.status(400).send({message: 'Please enter email & password'});
+            res.status(401).send({message: 'Please enter email & password'});
         }
 
         //Finding user in database 
@@ -138,7 +163,7 @@ exports.loginUser = async(req, res, next)=>{
             res.status(401).send({message: 'Invalid Email or Password'});
         }
         const token = createToken(user._id);
-        res.status(200).cookie('Usertoken', token, {httpOnly:true}).json({name:user.name});
+        res.status(200).json({name:user.name, profilePhoto:user.profilePhoto, authToken:token});
     }
     catch(err){
         console.error(err);
