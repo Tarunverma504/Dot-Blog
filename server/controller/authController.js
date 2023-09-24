@@ -10,8 +10,9 @@ const cryptr = new Cryptr(process.env.TWO_WAY_SECRET);
 
 exports.isAuthenticated = async(req, res)=>{
     const token = await req.headers.authorization.replace("Bearer ", "");
-    if (!token ||token.length<1|| token===null) {
+    if (!token ||token.length<1|| token =='null') {
         res.status(401).send({message: 'No User Loggged'});
+        return;
     }
 
     const Id = getTokenValue(token);
@@ -101,7 +102,6 @@ exports.verifyUserOtp = async(req, res, next)=>{
             }
             else{
                 if(user.otp == Otp){
-
                     const user = await User.findByIdAndUpdate({_id: id}, {verified:true});
 
                     const token = createToken(user._id);
