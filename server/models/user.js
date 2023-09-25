@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default:""
     },
+    posts:[{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Blogs"
+    }],
     createdAt: {
         type: Date,
         default: Date.now,

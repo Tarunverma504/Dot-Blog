@@ -50,3 +50,42 @@ exports.UploadThumbnail = async(req, res)=>{
     }
     
 }
+
+exports.CreateBlogSave = async(req, res)=>{
+    try{
+        const token = await req.headers.authorization.replace("Bearer ", "");
+        if (!token ||token.length<1|| token =='null') {
+            res.status(401).send({message: 'No User Loggged'});
+            return;
+        }
+        const Id = getTokenValue(token);
+        console.log(req.body);
+        const heading = req.body.heading;
+        const thumbnail = req.body.Thumbnail;
+        const content = req.body.content;
+        await Blog.create({
+            userId:Id,
+            Thumbnail:thumbnail,
+            Title:heading,
+            Body:content,
+            Category:null
+        })
+        .then(async(data)=>{
+            console.log(data);
+            await User.findByIdAndUpdate({_id: Id}, {$push:{posts:data._id}})
+            .then((data)=>{
+                res.status(200).send({message:"Success"});
+            })
+            .catch((err)=>{
+                res.status(500).send({message: err});
+            })
+        })
+        .catch((err)=>{
+            res.status(500).send({message: err});
+        })
+    }
+    catch(err){
+        res.status(500).send({message: err});
+    }
+
+}
