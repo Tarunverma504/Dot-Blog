@@ -31,7 +31,6 @@ const cloudinary = require('cloudinary');
 
 exports.UploadThumbnail = async(req, res)=>{
     const PrevImage = JSON.parse(req.body.PrevImage);
-    console.log(PrevImage);
     try{
         const result = await cloudinary.v2.uploader.upload(req.files.thumbnail_Img.tempFilePath,{
             folder: 'Dot-Blog/Blog_Thumbnails',
@@ -88,4 +87,34 @@ exports.CreateBlogSave = async(req, res)=>{
         res.status(500).send({message: err});
     }
 
+}
+
+exports.UploadProfilePhoto = async(req, res)=>{
+    try{
+        const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath, {
+            folder: 'Dot-Blog/Profile_Photo',
+            crop: "scale"
+        })
+
+        const token = await req.headers.authorization.replace("Bearer ", "");
+        const Id = getTokenValue(token);
+        const user = await User.findById({_id: Id});
+        if(user){
+            let profilePhoto_Public_ID = user.profilePhoto_Public_ID;
+            await User.findByIdAndUpdate({_id: Id}, { profilePhoto: result.url, profilePhoto_Public_ID: result.public_id}, {new: true})
+            .then(async(data)=>{
+                if(profilePhoto_Public_ID.trim().length>0){
+                    await cloudinary.v2.uploader.destroy(profilePhoto_Public_ID);
+                    res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
+                }
+            })
+            .catch((err)=>{
+                res.status(500).json({message:err})
+            })
+            
+        }
+    }
+    catch(err){
+        res.status(500).json({message:err})
+    }
 }

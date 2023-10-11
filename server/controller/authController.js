@@ -18,7 +18,7 @@ exports.isAuthenticated = async(req, res)=>{
     const Id = getTokenValue(token);
     const user = await User.findById(Id);
     if(user){
-         res.status(200).json({name:user.name, profilePhoto:user.profilePhoto})
+        res.status(200).json({name:user.name, profilePhoto:user.profilePhoto, coverPhoto: user.coverPhoto, authToken:token})
     }
 
 }
@@ -41,7 +41,7 @@ exports.registerUser = async(req, res)=>{
                 
             // email is exist but otp is not verified
             else{
-                user = await User.findByIdAndUpdate({_id: result[0]._id}, {name:username}, {password:password}, { otp: otp});                       
+                user = await User.findByIdAndUpdate({_id: result[0]._id}, {name:username, password:password, otp: otp}, {new: true});                       
             }
         }
         else{
