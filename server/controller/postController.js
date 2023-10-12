@@ -118,3 +118,34 @@ exports.UploadProfilePhoto = async(req, res)=>{
         res.status(500).json({message:err})
     }
 }
+
+exports.UploadCoverPhoto = async(req, res)=>{
+    try{
+        console.log("Triggers");
+        const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath, {
+            folder: 'Dot-Blog/Cover_Photo',
+            crop: "scale"
+        })
+
+        const token = await req.headers.authorization.replace("Bearer ", "");
+        const Id = getTokenValue(token);
+        const user = await User.findById({_id: Id});
+        if(user){
+            let coverPhoto_Public_ID = user.coverPhoto_Public_ID;
+            await User.findByIdAndUpdate({_id: Id}, { coverPhoto: result.url, coverPhoto_Public_ID: result.public_id}, {new: true})
+            .then(async(data)=>{
+                if(coverPhoto_Public_ID.trim().length>0){
+                    await cloudinary.v2.uploader.destroy(coverPhoto_Public_ID);
+                    res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
+                }
+            })
+            .catch((err)=>{
+                res.status(500).json({message:err})
+            })
+            
+        }
+    }
+    catch(err){
+        res.status(500).json({message:err})
+    }
+}
