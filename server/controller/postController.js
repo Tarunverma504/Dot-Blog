@@ -2,7 +2,12 @@ const User = require("../models/user");
 const Blog = require("../models/blog");
 const { createToken,getTokenValue} = require("../utils/jwtToken");
 const cloudinary = require('cloudinary');
-
+const monthNames = [
+    "January", "February", "March",
+    "April", "May", "June", "July",
+    "August", "September", "October",
+    "November", "December"
+    ];
 
 // exports.CreateNewPost = async(req, res)=>{
 //     try{
@@ -58,32 +63,44 @@ exports.CreateBlogSave = async(req, res)=>{
             return;
         }
         const Id = getTokenValue(token);
-        console.log(req.body);
         const heading = req.body.heading;
-        const thumbnail = req.body.Thumbnail;
-        const content = req.body.content;
-        await Blog.create({
-            userId:Id,
-            Thumbnail:thumbnail,
-            Title:heading,
-            Body:content,
-            Category:null
+        let content = req.body.content;
+        content = content.split("<br>").join("<br/>");
+        const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath,{
+            folder: 'Dot-Blog/Blog_Thumbnails',
+            crop: "scale"
         })
-        .then(async(data)=>{
-            console.log(data);
-            await User.findByIdAndUpdate({_id: Id}, {$push:{posts:data._id}})
-            .then((data)=>{
-                res.status(200).send({message:"Success"});
+
+        if(result){
+            await Blog.create({
+                userId:Id,
+                Thumbnail:result.url,
+                Thumbnail_PublicId:result.public_id,
+                Title:heading,
+                Body:content,
+                Category:null
+            })
+            .then(async(data)=>{
+                console.log(data);
+                await User.findByIdAndUpdate({_id: Id}, {$push:{posts:data._id}})
+                .then((data)=>{
+                    res.status(200).send({message:"Success"});
+                })
+                .catch((err)=>{
+                    res.status(500).send({message: err});
+                })
             })
             .catch((err)=>{
                 res.status(500).send({message: err});
             })
-        })
-        .catch((err)=>{
+        }
+        else{
             res.status(500).send({message: err});
-        })
+        }
+        
     }
     catch(err){
+        console.log(err);
         res.status(500).send({message: err});
     }
 
@@ -147,5 +164,66 @@ exports.UploadCoverPhoto = async(req, res)=>{
     }
     catch(err){
         res.status(500).json({message:err})
+    }
+}
+
+exports.GetUserBlogs = async(req, res)=>{
+    try{
+        const token = await req.headers.authorization.replace("Bearer ", "");
+        if (!token ||token.length<1|| token =='null') {
+            res.status(401).send({message: 'No User Loggged'});
+            return;
+        }
+        const Id = getTokenValue(token);
+        const user = await User.findById({_id: Id}).populate('posts');
+        
+        if(user){
+            let publishedBlogs = [];
+            let draftBlogs = [];
+            (user.posts).forEach(e => {
+                if(e.isPublished){
+                    publishedBlogs.push(e);
+                }
+                else{
+                    draftBlogs.push(e);
+                }
+            });
+            res.status(200).json({Published:publishedBlogs, Draft:draftBlogs});
+        }
+        else{
+            res.status(500).json({message:err})
+        }
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err})
+    }
+}
+
+exports.GetBlog = async(req, res)=>{
+    try
+    {
+        const id = req.params.id;
+        await Blog.findById({_id:id}).populate('userId')
+        .then((data)=>{
+            const result = {
+                Title:data.Title,
+                Body:data.Body,
+                Thumbnail:data.Thumbnail,
+                AuthorName: data.userId.name,
+                AuthorId: data.userId._id,
+                AuthorPhoto: data.userId.profilePhoto,
+                CreatedAt: monthNames[data.createdAt.getMonth()]+" "+data.createdAt.getDate()+","+data.createdAt.getFullYear()
+            };
+            res.status(200).json(result);
+        })
+        .catch((err)=>{
+            console.log(err);
+            res.status(500).json({message:err});
+        })
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
     }
 }

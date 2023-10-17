@@ -2,9 +2,13 @@ const mongoose = require('mongoose');
 const blogSchema = new mongoose.Schema({
     userId:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: "users"
+        ref: "User"
     },
     Thumbnail:{
+        type:String,
+        trim:true
+    },
+    Thumbnail_PublicId:{
         type:String,
         trim:true
     },
