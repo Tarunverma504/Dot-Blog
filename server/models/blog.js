@@ -16,6 +16,10 @@ const blogSchema = new mongoose.Schema({
         type:String,
         trim:true
     },
+    SubText:{
+        type:String,
+        trim:true
+    },
     Body:{
         type:String,
         trim:true

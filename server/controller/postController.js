@@ -64,6 +64,7 @@ exports.CreateBlogSave = async(req, res)=>{
         }
         const Id = getTokenValue(token);
         const heading = req.body.heading;
+        const subText = req.body.subText;
         let content = req.body.content;
         content = content.split("<br>").join("<br/>");
         const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath,{
@@ -78,7 +79,8 @@ exports.CreateBlogSave = async(req, res)=>{
                 Thumbnail_PublicId:result.public_id,
                 Title:heading,
                 Body:content,
-                Category:null
+                Category:null,
+                SubText:subText
             })
             .then(async(data)=>{
                 console.log(data);
@@ -206,6 +208,7 @@ exports.GetBlog = async(req, res)=>{
         const id = req.params.id;
         await Blog.findById({_id:id}).populate('userId')
         .then((data)=>{
+            console.log(data);
             const result = {
                 Title:data.Title,
                 Body:data.Body,
@@ -213,6 +216,7 @@ exports.GetBlog = async(req, res)=>{
                 AuthorName: data.userId.name,
                 AuthorId: data.userId._id,
                 AuthorPhoto: data.userId.profilePhoto,
+                SubText: data.SubText,
                 CreatedAt: monthNames[data.createdAt.getMonth()]+" "+data.createdAt.getDate()+","+data.createdAt.getFullYear()
             };
             res.status(200).json(result);
@@ -225,5 +229,77 @@ exports.GetBlog = async(req, res)=>{
     catch(err){
         console.log(err);
         res.status(500).json({message:err});
+    }
+}
+
+exports.UpdateBlog = async(req, res)=>{
+    try
+    {
+        const token = await req.headers.authorization.replace("Bearer ", "");
+        if (!token ||token.length<1|| token =='null') {
+            res.status(401).send({message: 'No User Loggged'});
+            return;
+        }
+       
+        const {isThumbnailUpdated} = req.body;
+        const id = req.params.id;
+        if(isThumbnailUpdated=='true'){
+            const getBlog = await Blog.findById(id);
+            const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath,{
+                folder: 'Dot-Blog/Blog_Thumbnails',
+                crop: "scale"
+            })
+            if((getBlog.Thumbnail_PublicId).trim().length>0){
+                await cloudinary.v2.uploader.destroy(getBlog.Thumbnail_PublicId)
+            }
+
+            const heading = req.body.heading;
+            const subText = req.body.subText;
+            let content = req.body.content;
+            content = content.split("<br>").join("<br/>");
+            await Blog.findByIdAndUpdate({_id:id}, {Title:heading, SubText:subText, Body:content, Thumbnail:result.url, Thumbnail_PublicId:result.public_id}, {new:true})
+            .then((data)=>{
+                res.status(200).json({message:"Blog Saved Successfully"});
+            })
+            .catch ((err)=>{
+                console.log(err);
+                res.status(500).json(err);
+            })
+        }
+        else{
+            const id = req.params.id;
+            const heading = req.body.heading;
+            const subText = req.body.subText;
+            let content = req.body.content;
+            content = content.split("<br>").join("<br/>");
+            await Blog.findByIdAndUpdate({_id:id}, {Title:heading, SubText:subText, Body:content}, {new:true})
+            .then((data)=>{
+                res.status(200).json({message:"Blog Saved Successfully"});
+            })
+            .catch ((err)=>{
+                console.log(err);
+                res.status(500).json(err);
+            })
+        }
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
+    }
+}
+
+exports.GetAllBlogs = async(req, res)=>{
+    try{
+        await Blog.find({isPublished:true}).populate('userId')
+        .then((data)=>{
+            res.status(200).json(data);
+        })
+        .catch((err)=>{
+            res.status(500).json(err);
+        })
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json(err);
     }
 }

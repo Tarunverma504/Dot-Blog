@@ -7,7 +7,9 @@ const {
     UploadProfilePhoto,
     UploadCoverPhoto,
     GetUserBlogs,
-    GetBlog
+    GetBlog,
+    UpdateBlog,
+    GetAllBlogs
     } = require('../controller/postController');
 
 router.route('/upload-thumbnail').post(UploadThumbnail);
@@ -16,4 +18,6 @@ router.route('/upload/profile-photo').post(UploadProfilePhoto);
 router.route('/upload/cover-photo').post(UploadCoverPhoto);
 router.route('/get-user-blogs').get(GetUserBlogs);
 router.route('/get-blog/:id').get(GetBlog);
+router.route('/update-blog/:id').post(UpdateBlog);
+router.route('/get-blogs').get(GetAllBlogs);
 module.exports = router;
