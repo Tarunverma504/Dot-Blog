@@ -41,6 +41,10 @@ const userSchema = new mongoose.Schema({
         type:String,
         default:""
     },
+    about:{
+        type:String,
+        default:""
+    },
     posts:[{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Blog"

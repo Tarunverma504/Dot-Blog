@@ -1,9 +1,10 @@
 const User = require("../models/user");
+const ForgotPassword = require("../models/forgotPassword");
 const {createToken, getTokenValue} = require("../utils/jwtToken");
 const bcrypt = require('bcryptjs');
 const otpGenerator = require('otp-generator');
 const Cryptr = require('cryptr');
-const {sendOTP} = require("../utils/sendMails");
+const {sendOTP, sendResetLink} = require("../utils/sendMails");
 
 require('dotenv').config({ path: require('find-config')('.env') })
 const cryptr = new Cryptr(process.env.TWO_WAY_SECRET);
@@ -65,7 +66,6 @@ exports.registerUser = async(req, res)=>{
             const encryptedId = await cryptr.encrypt(user._id);
             let msg=`Hi,\n Your OTP is: ${otp}`;
             await sendOTP(user.email, msg);
-            console.log(user._id);
             const token = createToken(user._id);
             res.status(200).json({verificationToken:token});
         }
@@ -164,6 +164,106 @@ exports.loginUser = async(req, res, next)=>{
         }
         const token = createToken(user._id);
         res.status(200).json({name:user.name, profilePhoto:user.profilePhoto, authToken:token});
+    }
+    catch(err){
+        console.error(err);
+        res.status(504).send({ message: 'Internalserver error', err:err});
+    }
+}
+
+exports.forgotPassword = async(req, res, next)=>{
+    try{
+        const {email} = req.body;
+        // username = username.trim();
+        if(email.trim().length<1){
+            res.status(401).send({ message: 'Please fill all the details'});
+        }
+
+        const result = await User.findOne({email:email, verified:true});
+        if(result){
+            console.log(result._id);
+            await ForgotPassword.create({  
+                userId:result._id,
+                email:email
+            })
+            .then((data)=>{
+                console.log(data);
+                const msg = `<p>Hi, Please click the below link to change the password</p>
+                        <a href='${process.env.FRONTEND_URL}/reset-password/${data._id}'>Reset Password!</a>`
+                if(sendResetLink(email, msg, "Change account Password request")){
+                    res.status(200).send("Link send successfully");
+                }
+                else{
+                    res.status(504).send({ message: 'Internalserver error', err:err});
+                }
+            })
+        }
+        else{
+            res.status(403).json({message:"Invalid email"})
+        }
+
+
+    }
+    catch(err){
+        console.error(err);
+        res.status(504).send({ message: 'Internalserver error', err:err});
+    }
+}
+
+exports.resetPassword = async(req, res)=>{
+    try{
+        const { password, confirmPassword, id } = req.body;
+        if(password.trim().length<1 || confirmPassword.trim().length<1){
+            res.status(403).send({message:"Please fill all the fields"});
+        }
+        else{
+            if(password.trim() != confirmPassword.trim()){
+                res.status(403).send({message:"password doesn't match"});
+            }
+            else{
+                const forgotPassword = await ForgotPassword.findById(id);
+                if(forgotPassword && forgotPassword._id){
+                    console.log(forgotPassword._id);
+                    const hashPassword = await bcrypt.hash(password.trim(),10)
+                    User.findByIdAndUpdate({_id:forgotPassword.userId}, {password:hashPassword}, {new:true})
+                    .then(async()=>{
+                        await ForgotPassword.findByIdAndUpdate({_id:forgotPassword._id}, {expired:true})
+                        .then(()=>{
+                            res.status(200).json("Password updated successfully");
+                        })
+                        .catch((err)=>{
+                            res.status(504).send({ message: 'Internalserver error', err:err});
+                        })
+                    })
+                    .catch((err)=>{
+                        res.status(504).send({ message: 'Internalserver error', err:err});
+                    })
+                }
+                else{
+                    res.status(504).send({ message: 'Internalserver error', err:err});
+                }
+            }
+        }
+    }
+    catch(err){
+        console.error(err);
+        res.status(504).send({ message: 'Internalserver error', err:err});
+    }
+}
+
+exports.checkResetLink = async(req, res)=>{
+    try{
+        const id = req.params.id;
+        if(id){
+            await ForgotPassword.findById(id)
+            .then((data)=>{
+                res.status(200).json(data.expired)
+            })
+            .catch((err)=>{
+                console.log(err);
+                res.status(504).send({ message: 'Internalserver error', err:err});
+            })
+        }
     }
     catch(err){
         console.error(err);

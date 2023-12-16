@@ -32,4 +32,30 @@ async function sendOTP(email, msg){
     }
 }
 
-module.exports = {sendOTP};
+async function sendResetLink(email, msg, subject){
+    const sender = {
+        email: process.env.SENDER_MAIL_ID,
+        name:'Dot-Blog'
+    }
+    try{
+         await apiInstance.sendTransacEmail({
+            sender,
+            to: [{email: email}],
+            subject: `${subject}`,
+            htmlContent:`${msg}`
+        })
+        .then((data)=>{
+            console.log(data);
+            return true;
+        })
+        .catch((err)=>{
+            console.log(err);
+            return false;
+        })
+    }
+    catch(err){
+        console.log(err);
+    }
+}
+
+module.exports = {sendOTP, sendResetLink};

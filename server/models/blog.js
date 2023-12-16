@@ -32,6 +32,10 @@ const blogSchema = new mongoose.Schema({
         type: Boolean, 
         default: false
     },
+    PublishedDate:{
+        type:Date,
+        default:Date.now
+    },
     createdAt:{
         type:Date,
         default:Date.now

@@ -9,7 +9,11 @@ const {
     GetUserBlogs,
     GetBlog,
     UpdateBlog,
-    GetAllBlogs
+    GetAllBlogs,
+    PublishBlog,
+    GetAllPublishedBlogs,
+    GetAuthor,
+    UpdateAbout
     } = require('../controller/postController');
 
 router.route('/upload-thumbnail').post(UploadThumbnail);
@@ -20,4 +24,8 @@ router.route('/get-user-blogs').get(GetUserBlogs);
 router.route('/get-blog/:id').get(GetBlog);
 router.route('/update-blog/:id').post(UpdateBlog);
 router.route('/get-blogs').get(GetAllBlogs);
+router.route('/publish-blog').post(PublishBlog);
+router.route('/get-all-blogs').get(GetAllPublishedBlogs);
+router.route('/Author/:id').get(GetAuthor);
+router.route('/update-about').post(UpdateAbout);
 module.exports = router;

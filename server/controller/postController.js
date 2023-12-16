@@ -43,9 +43,6 @@ exports.UploadThumbnail = async(req, res)=>{
         })
         if(Object.keys(PrevImage).length>0){
             await cloudinary.v2.uploader.destroy(PrevImage.public_id)
-            .then((data)=>{
-                console.log(data);
-            })
         }
         res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
     }
@@ -83,7 +80,6 @@ exports.CreateBlogSave = async(req, res)=>{
                 SubText:subText
             })
             .then(async(data)=>{
-                console.log(data);
                 await User.findByIdAndUpdate({_id: Id}, {$push:{posts:data._id}})
                 .then((data)=>{
                     res.status(200).send({message:"Success"});
@@ -140,7 +136,6 @@ exports.UploadProfilePhoto = async(req, res)=>{
 
 exports.UploadCoverPhoto = async(req, res)=>{
     try{
-        console.log("Triggers");
         const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath, {
             folder: 'Dot-Blog/Cover_Photo',
             crop: "scale"
@@ -178,22 +173,29 @@ exports.GetUserBlogs = async(req, res)=>{
         }
         const Id = getTokenValue(token);
         const user = await User.findById({_id: Id}).populate('posts');
-        
         if(user){
-            let publishedBlogs = [];
-            let draftBlogs = [];
-            (user.posts).forEach(e => {
+            const oData = {
+                name: user.name,
+                profilePhoto: user.profilePhoto,
+                coverPhoto: user.coverPhoto,
+                about:user.about,
+                Published:[],
+                Draft:[]
+            }
+            const posts = user.posts;
+            (posts).forEach(function(e){
                 if(e.isPublished){
-                    publishedBlogs.push(e);
+                    oData.Published.push(e);
                 }
                 else{
-                    draftBlogs.push(e);
+                    oData.Draft.push(e);
                 }
-            });
-            res.status(200).json({Published:publishedBlogs, Draft:draftBlogs});
+            })
+            res.status(200).json(oData);
+
         }
         else{
-            res.status(500).json({message:err})
+            res.status(500).json({message:"Something went wrong"})
         }
     }
     catch(err){
@@ -208,7 +210,6 @@ exports.GetBlog = async(req, res)=>{
         const id = req.params.id;
         await Blog.findById({_id:id}).populate('userId')
         .then((data)=>{
-            console.log(data);
             const result = {
                 Title:data.Title,
                 Body:data.Body,
@@ -301,5 +302,125 @@ exports.GetAllBlogs = async(req, res)=>{
     catch(err){
         console.log(err);
         res.status(500).json(err);
+    }
+}
+
+exports.PublishBlog = async(req, res)=>{
+    try
+    {
+        const token = await req.headers.authorization.replace("Bearer ", "");
+        if (!token ||token.length<1|| token =='null') {
+            res.status(401).send({message: 'No User Loggged'});
+            return;
+        }  
+        const id = req.body.Blogid;
+        await Blog.findByIdAndUpdate({_id:id}, {isPublished:true, PublishedDate: new Date()}, {new:true})
+        .then((data)=>{
+            res.status(200).json({message:"Blog Published Successfully"});
+        })
+        .catch ((err)=>{
+            console.log(err);
+            res.status(500).json(err);
+        })
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
+    }
+}
+
+exports.GetAllPublishedBlogs = async(req, res)=>{
+    try{
+        await Blog.find({isPublished:true}).sort({PublishedDate: -1}).populate('userId')
+        .then((data)=>{
+            res.status(200).json(data);
+        })
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
+    }
+}
+
+exports.GetAuthor = async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const user = await User.findById(id).populate('posts')
+        if(user){
+            const oData = {
+                name: user.name,
+                profilePhoto: user.profilePhoto,
+                coverPhoto: user.coverPhoto,
+                about:user.about,
+                Published:[],
+                Draft:[]
+            }
+
+            const posts = user.posts;
+            (posts).forEach(function(e){
+                if(e.isPublished){
+                    oData.Published.push(e);
+                }
+
+            })
+            res.status(200).json(oData);
+
+        }
+        else{
+            res.status(500).json({message:"Something went wrong"})
+        }
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
+    }
+}
+
+exports.UpdateAbout = async(req, res)=>{
+    try{
+        const token = await req.headers.authorization.replace("Bearer ", "");
+        if (!token ||token.length<1|| token =='null') {
+            res.status(401).send({message: 'No User Loggged'});
+            return;
+        }
+        const id = getTokenValue(token);
+        let about = req.body.about;
+        about = about.trim();
+        about = about.split("<br>").join("<br/>");
+        console.log(typeof(about));
+        await User.findByIdAndUpdate({_id: id},{$set:{about:about}});
+        const user = await User.findById(id).populate('posts')
+        if(user){
+            const oData = {
+                name: user.name,
+                profilePhoto: user.profilePhoto,
+                coverPhoto: user.coverPhoto,
+                about:user.about,
+                Published:[],
+                Draft:[]
+            }
+
+            const posts = user.posts;
+            (posts).forEach(function(e){
+                if(e.isPublished){
+                    oData.Published.push(e);
+                }
+                else{
+                    oData.Draft.push(e);
+                }
+            })
+            res.status(200).json(oData);
+
+        }
+        else{
+            res.status(500).json({message:"Something went wrong"})
+        }
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
     }
 }
