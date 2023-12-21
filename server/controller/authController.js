@@ -223,21 +223,20 @@ exports.resetPassword = async(req, res)=>{
             else{
                 const forgotPassword = await ForgotPassword.findById(id);
                 if(forgotPassword && forgotPassword._id){
-                    console.log(forgotPassword._id);
                     const hashPassword = await bcrypt.hash(password.trim(),10)
                     User.findByIdAndUpdate({_id:forgotPassword.userId}, {password:hashPassword}, {new:true})
-                    .then(async()=>{
-                        await ForgotPassword.findByIdAndUpdate({_id:forgotPassword._id}, {expired:true})
-                        .then(()=>{
-                            res.status(200).json("Password updated successfully");
+                        .then(async()=>{
+                            await ForgotPassword.findByIdAndUpdate({_id:forgotPassword._id}, {expired:true})
+                                .then(()=>{
+                                    res.status(200).json("Password updated successfully");
+                                })
+                                .catch((err)=>{
+                                    res.status(504).send({ message: 'Internalserver error', err:err});
+                                })
                         })
                         .catch((err)=>{
                             res.status(504).send({ message: 'Internalserver error', err:err});
                         })
-                    })
-                    .catch((err)=>{
-                        res.status(504).send({ message: 'Internalserver error', err:err});
-                    })
                 }
                 else{
                     res.status(504).send({ message: 'Internalserver error', err:err});

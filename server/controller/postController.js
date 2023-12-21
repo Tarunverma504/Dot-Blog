@@ -120,8 +120,9 @@ exports.UploadProfilePhoto = async(req, res)=>{
             .then(async(data)=>{
                 if(profilePhoto_Public_ID.trim().length>0){
                     await cloudinary.v2.uploader.destroy(profilePhoto_Public_ID);
-                    res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
+                    //res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
                 }
+                res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
             })
             .catch((err)=>{
                 res.status(500).json({message:err})
@@ -332,10 +333,26 @@ exports.PublishBlog = async(req, res)=>{
 
 exports.GetAllPublishedBlogs = async(req, res)=>{
     try{
-        await Blog.find({isPublished:true}).sort({PublishedDate: -1}).populate('userId')
-        .then((data)=>{
-            res.status(200).json(data);
-        })
+        const searchValue = req.query.search || '';
+        if(searchValue.trim().length<1){
+            await Blog.find({isPublished:true}).sort({PublishedDate: -1}).populate('userId')
+            .then((data)=>{
+                res.status(200).json(data);
+            })
+        }
+        else{
+            await Blog.find({isPublished:true, 
+                $or: [
+                    { Title: { $regex: searchValue, $options: 'i' } },
+                    { SubText: { $regex: searchValue, $options: 'i' } },
+                    { Body: { $regex: searchValue, $options: 'i' } },
+                    { Category: { $regex: searchValue, $options: 'i' } }
+                ]
+            }).sort({PublishedDate: -1}).populate('userId')
+            .then((data)=>{
+                res.status(200).json(data);
+            })
+        }
     }
     catch(err){
         console.log(err);
@@ -416,6 +433,29 @@ exports.UpdateAbout = async(req, res)=>{
         }
         else{
             res.status(500).json({message:"Something went wrong"})
+        }
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
+    }
+}
+
+exports.getCategoriesBlogs = async(req, res)=>{
+    try{
+        const category = req.params.category;
+        if(category == 'DefaultOption'){
+            await Blog.find({isPublished:true}).sort({PublishedDate: -1}).populate('userId')
+            .then((data)=>{
+                res.status(200).json(data);
+            })
+        }
+        else{
+            await Blog.find({Category:category,isPublished: true}).sort({PublishedDate: -1}).populate('userId')
+            .then((data)=>{
+                res.status(200).json(data);
+            })
         }
 
     }

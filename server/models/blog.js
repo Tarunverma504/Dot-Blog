@@ -32,6 +32,27 @@ const blogSchema = new mongoose.Schema({
         type: Boolean, 
         default: false
     },
+    likes:[
+        {
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+            },
+        },
+    ],
+    comments: [
+        {
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+            },
+            text: String,
+            createdAt: {
+                type: Date,
+                default: Date.now,
+            },
+        },
+    ],
     PublishedDate:{
         type:Date,
         default:Date.now
@@ -40,7 +61,6 @@ const blogSchema = new mongoose.Schema({
         type:Date,
         default:Date.now
     }
-
 })
 
 module.exports = mongoose.model('Blog', blogSchema);

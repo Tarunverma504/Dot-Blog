@@ -13,7 +13,8 @@ const {
     PublishBlog,
     GetAllPublishedBlogs,
     GetAuthor,
-    UpdateAbout
+    UpdateAbout,
+    getCategoriesBlogs
     } = require('../controller/postController');
 
 router.route('/upload-thumbnail').post(UploadThumbnail);
@@ -28,4 +29,5 @@ router.route('/publish-blog').post(PublishBlog);
 router.route('/get-all-blogs').get(GetAllPublishedBlogs);
 router.route('/Author/:id').get(GetAuthor);
 router.route('/update-about').post(UpdateAbout);
+router.route('/get-categories-blogs/:category').get(getCategoriesBlogs);
 module.exports = router;
