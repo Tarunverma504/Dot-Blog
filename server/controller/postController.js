@@ -1,5 +1,6 @@
 const User = require("../models/user");
 const Blog = require("../models/blog");
+const mongoose = require('mongoose');
 const { createToken,getTokenValue} = require("../utils/jwtToken");
 const cloudinary = require('cloudinary');
 const monthNames = [
@@ -8,6 +9,8 @@ const monthNames = [
     "August", "September", "October",
     "November", "December"
     ];
+const objectId = mongoose.Types.ObjectId;
+
 
 // exports.CreateNewPost = async(req, res)=>{
 //     try{
@@ -210,7 +213,16 @@ exports.GetBlog = async(req, res)=>{
     {
         const id = req.params.id;
         await Blog.findById({_id:id}).populate('userId')
-        .then((data)=>{
+        .then(async(data)=>{
+            let isAlreadyLiked = false;
+            const token = await req.headers.authorization.replace("Bearer ", "");
+            if (!token ||token.length<1|| token =='null') {
+                isAlreadyLiked = false;
+            }
+            else{
+                const Id = getTokenValue(token);
+                isAlreadyLiked = data.likes.some(like => like.userId.equals(Id));
+            }
             const result = {
                 Title:data.Title,
                 Body:data.Body,
@@ -219,7 +231,10 @@ exports.GetBlog = async(req, res)=>{
                 AuthorId: data.userId._id,
                 AuthorPhoto: data.userId.profilePhoto,
                 SubText: data.SubText,
-                CreatedAt: monthNames[data.createdAt.getMonth()]+" "+data.createdAt.getDate()+","+data.createdAt.getFullYear()
+                CreatedAt: monthNames[data.createdAt.getMonth()]+" "+data.createdAt.getDate()+","+data.createdAt.getFullYear(),
+                likes: data.likes,
+                comments: data.comments,
+                isAlreadyLiked: isAlreadyLiked
             };
             res.status(200).json(result);
         })
@@ -463,4 +478,34 @@ exports.getCategoriesBlogs = async(req, res)=>{
         console.log(err);
         res.status(500).json({message:err});
     }
+}
+
+exports.LikeThePost = async(req, res)=>{
+    try{
+        const {userId, BlogId} = req.body;
+        const id = getTokenValue(userId);
+        await Blog.findByIdAndUpdate(new objectId(BlogId), {$push:{likes: {userId: id}}}, { new: true })
+        .then(()=>{
+            res.status(200).json({message: "Blog Liked"})
+        })
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
+    }
+}
+
+exports.DislikeThePost = async(req, res)=>{
+    try{
+        const {userId, BlogId} = req.body;
+        const id = getTokenValue(userId);
+        await Blog.findByIdAndUpdate(new objectId(BlogId), {$pull:{likes: {userId:new objectId(id)}}}, { new: true })
+        .then(()=>{
+            res.status(200).json({message: "Blog Disliked"})
+        })
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({message:err});
+    }   
 }
