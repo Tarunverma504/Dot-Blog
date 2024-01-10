@@ -28,4 +28,8 @@ cloudinary.config({
 
 app.use('/api/v2', auth);
 app.use('/api/v2', posts);
+
+app.get("/", async(req, res)=>{
+  res.send("Dot Blog")
+})
 module.exports = app;
