@@ -140,10 +140,14 @@ exports.UploadProfilePhoto = async(req, res)=>{
 
 exports.UploadCoverPhoto = async(req, res)=>{
     try{
-        const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath, {
+        // const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath, {
+        //     folder: 'Dot-Blog/Cover_Photo',
+        //     crop: "scale"
+        // })
+        const result = await cloudinary.v2.uploader.upload(req.files.image.data, {
             folder: 'Dot-Blog/Cover_Photo',
             crop: "scale"
-        })
+        });
 
         const token = await req.headers.authorization.replace("Bearer ", "");
         const Id = getTokenValue(token);
