@@ -109,23 +109,17 @@ exports.CreateBlogSave = async(req, res)=>{
 
 exports.UploadProfilePhoto = async(req, res)=>{
     try{
-        const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath, {
-            folder: 'Dot-Blog/Profile_Photo',
-            crop: "scale"
-        })
-
         const token = await req.headers.authorization.replace("Bearer ", "");
         const Id = getTokenValue(token);
         const user = await User.findById({_id: Id});
         if(user){
             let profilePhoto_Public_ID = user.profilePhoto_Public_ID;
-            await User.findByIdAndUpdate({_id: Id}, { profilePhoto: result.url, profilePhoto_Public_ID: result.public_id}, {new: true})
+            await User.findByIdAndUpdate({_id: Id}, { profilePhoto: req.body.url, profilePhoto_Public_ID: req.body.public_id}, {new: true})
             .then(async(data)=>{
                 if(profilePhoto_Public_ID.trim().length>0){
                     await cloudinary.v2.uploader.destroy(profilePhoto_Public_ID);
-                    //res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
                 }
-                res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
+                res.status(200).json({ImageUrl:req.body.url, public_id:req.body.public_id})
             })
             .catch((err)=>{
                 res.status(500).json({message:err})
@@ -140,34 +134,27 @@ exports.UploadProfilePhoto = async(req, res)=>{
 
 exports.UploadCoverPhoto = async(req, res)=>{
     try{
-        // const result = await cloudinary.v2.uploader.upload(req.files.image.tempFilePath, {
-        //     folder: 'Dot-Blog/Cover_Photo',
-        //     crop: "scale"
-        // })
-        const result = await cloudinary.v2.uploader.upload(req.files.image.data, {
-            folder: 'Dot-Blog/Cover_Photo',
-            crop: "scale"
-        });
-
         const token = await req.headers.authorization.replace("Bearer ", "");
         const Id = getTokenValue(token);
         const user = await User.findById({_id: Id});
         if(user){
             let coverPhoto_Public_ID = user.coverPhoto_Public_ID;
-            await User.findByIdAndUpdate({_id: Id}, { coverPhoto: result.url, coverPhoto_Public_ID: result.public_id}, {new: true})
+            await User.findByIdAndUpdate({_id: Id}, { coverPhoto: req.body.url, coverPhoto_Public_ID: req.body.public_id}, {new: true})
             .then(async(data)=>{
                 if(coverPhoto_Public_ID.trim().length>0){
                     await cloudinary.v2.uploader.destroy(coverPhoto_Public_ID);
-                    res.status(200).json({ImageUrl:result.url, public_id:result.public_id})
+                    res.status(200).json({ImageUrl:req.body.url, public_id:req.body.public_id})
                 }
             })
             .catch((err)=>{
+                console.log(err);
                 res.status(500).json({message:err})
             })
             
         }
     }
     catch(err){
+        console.log(err);
         res.status(500).json({message:err})
     }
 }

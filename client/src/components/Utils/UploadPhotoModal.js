@@ -13,9 +13,10 @@ import {
         UPLOAD_PHOTO_FAILED
     } from '../../constants/postConstants';
 
+// const cloudinary = require('cloudinary').v2
+
 
 const UploadPhotoModal = (props)=>{
-
     const dispatch = useDispatch();
     const {loading} = useSelector(state => state.post)
 
@@ -48,28 +49,91 @@ const UploadPhotoModal = (props)=>{
         setFile(obj);
     }
 
+    // const SaveImage2 = async() =>{
+    //     dispatch({type:UPLOAD_PHOTO_REQUEST})
+    //     const fd = new FormData();
+    //     fd.append("image_Name",file.name);
+    //     fd.append("image",file);
+    //     const Token = localStorage.getItem(AUTH_TOKEN);
+    //     const config = {
+    //         headers:{
+    //             'Content-Type': 'multipart/form-data',
+    //             'authorization':`Bearer ${Token}`
+    //         }
+    //     }
+    //     await axios.post(`${process.env.REACT_APP_PORT}/api/v2/upload/${props.endpoint}`, fd, config)
+    //     .then((data)=>{
+    //         props.toggleState(false);
+    //         dispatch(getPosts());
+    //         dispatch({type: UPLOAD_PHOTO_SUCCESS})
+    //     })
+    //     .catch((err)=>{
+    //         console.log(err);
+    //         dispatch({type: UPLOAD_PHOTO_FAILED})
+    //     })
+    // }
+
     const SaveImage = async() =>{
         dispatch({type:UPLOAD_PHOTO_REQUEST})
-        const fd = new FormData();
-        fd.append("image_Name",file.name);
-        fd.append("image",file.image);
-        const Token = localStorage.getItem(AUTH_TOKEN);
-        const config = {
-            headers:{
-                'Content-Type': 'multipart/form-data',
-                'authorization':`Bearer ${Token}`
-            }
+        const formData = new FormData();
+        formData.append('file', file.image);
+        formData.append('upload_preset', process.env.REACT_APP_UPLOAD_PRESET);
+        formData.append('cloud_name', process.env.REACT_APP_CLOUD_NAME);
+        console.log(props.endpoint);
+        if(props.endpoint == "cover-photo"){
+            formData.append('folder', 'Dot-Blog/Cover_Photo'); // Add folder path here
         }
-        await axios.post(`${process.env.REACT_APP_PORT}/api/v2/upload/${props.endpoint}`, fd, config)
-        .then((data)=>{
-            props.toggleState(false);
-            dispatch(getPosts());
-            dispatch({type: UPLOAD_PHOTO_SUCCESS})
+        else{
+            formData.append('folder', 'Dot-Blog/Profile_Photo');
+        }
+        
+        await axios.post(`https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUD_NAME}/image/upload`, formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+        )
+        .then(async(oResult)=>{
+            console.log(oResult);
+            if(oResult && oResult.data){
+                const fd = {
+                    url: oResult.data.url,
+                    public_id: oResult.data.public_id
+                }
+                const Token = localStorage.getItem(AUTH_TOKEN);
+                const config = {
+                    headers:{
+                        'authorization':`Bearer ${Token}`
+                    }
+                }
+
+                console.log(fd);
+                
+                await axios.post(`${process.env.REACT_APP_PORT}/api/v2/upload/${props.endpoint}`, fd, config)
+                    .then((data)=>{
+                        console.log(data);
+                        props.toggleState(false);
+                        dispatch(getPosts());
+                        dispatch({type: UPLOAD_PHOTO_SUCCESS})
+                    })
+                    .catch((err)=>{
+                        console.log(err);
+                        dispatch({type: UPLOAD_PHOTO_FAILED})
+                    })
+            }
+            else{
+                dispatch({type: UPLOAD_PHOTO_FAILED})
+            }
+            // dispatch({type: UPLOAD_PHOTO_SUCCESS})
+
         })
-        .catch((err)=>{
-            console.log(err);
+        .catch((error)=>{
+            console.log(error);
             dispatch({type: UPLOAD_PHOTO_FAILED})
         })
+
+    
     }
 
     return(
