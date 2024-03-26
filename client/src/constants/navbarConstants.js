@@ -1,0 +1,12 @@
+export const LOGIN_ROUTE = '/login'; //
+export const HOME_ROUTE = '/'; //
+export const REGISTER_ROUTE  = '/register'; //
+export const VERIFY_ROUTE= "/Verify-User"; //
+export const AUTHOR_ROUTE= "/Author"; 
+export const BLOG_ROUTE= "/blog";
+export const SERVER_ERROR_ROUTE= "/server-error"; //
+export const FORGOT_PASSWORD_ROUTE= "/forgot-password";//
+export const RESET_PASSWORD_ROUTE= "/reset-password";//
+export const CREATE_POST_ROUTE= "/create-post"; //
+export const PROFILE_ROUTE= "/profile"; //
+export const EDIT_BLOG_ROUTE= "/edit-blog";//
